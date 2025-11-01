@@ -4,6 +4,14 @@
 *.mov
 *.mkv
 
+# Audio files
+*.mp3
+
+# Image files
+*.png
+*.jpg
+*.jpeg
+
 # Large model files
 *.pt
 *.pth
