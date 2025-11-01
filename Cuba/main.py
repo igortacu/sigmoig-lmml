@@ -1,15 +1,14 @@
-"""Remove sentences that start with the letters S, T, O, or P
+"""Keep only sentences that start with the letters S, T, O, or P.
+
+This script reads `input.txt` next to this file and writes `output.txt` keeping
+only the lines whose first non-whitespace character is one of the specified
+letters (default: STOP).
 """
 from pathlib import Path
 import argparse
-import sys
-import re
 DEFAULT_LETTERS = set("STOP")
 def should_drop_line(line: str, letters: set) -> bool:
-	"""Return True if the line's first non-space character is in letters.
 
-	Empty lines are preserved.
-	"""
 	stripped = line.lstrip()
 	if not stripped:
 		return False
@@ -20,7 +19,8 @@ def should_drop_line(line: str, letters: set) -> bool:
 def process_file(in_path: Path, out_path: Path, letters: set):
 	text = in_path.read_text(encoding="utf-8")
 	lines = text.splitlines()
-	out_lines = [l for l in lines if not should_drop_line(l, letters)]
+	# Keep only lines that match the letter filter (i.e., first letter in set)
+	out_lines = [l for l in lines if should_drop_line(l, letters)]
 	out_path.write_text("\n".join(out_lines), encoding="utf-8")
 
 
