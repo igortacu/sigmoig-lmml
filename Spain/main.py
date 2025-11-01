@@ -4,9 +4,8 @@ import pytesseract
 import random
 import os
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-os.chdir(r'D:\FAF\Hackaton\LLML Sigmoid\sigmoig-lmml\Spain')
+pytesseract.pytesseract.tesseract_cmd = './Tesseract-OCR/tesseract.exe'
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 BLOCK = 16
 SEED = 42
