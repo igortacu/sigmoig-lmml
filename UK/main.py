@@ -179,7 +179,7 @@ def process_video(video_path: Path, out_dir: Path, detect_every: int = 1) -> dic
             continue
 
         h, w = chosen[0][1].shape[:2]
-        vid_path = seg_dir / "mouth_preview.mp4"
+        vid_path = seg_dir / "input.mp4"
         writer = cv2.VideoWriter(str(vid_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
         for j, (idx, roi, full) in enumerate(chosen):
             img_path = seg_dir / f"roi_{j:05d}.png"
