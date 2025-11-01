@@ -1,27 +1,32 @@
-import os, re, json
+import os
+import re
+import json
 from faster_whisper import WhisperModel
 
 CHUNK_DIR = "chunks"
 
-# only the files with possible letters
+# run medium only on the files we know have something
 FILES = [
-    "out_000.mp3",
-    "out_008.mp3",
-    "out_009.mp3",
-    "out_025.mp3",
-    "out_026.mp3",
-    "out_062.mp3",
+    "out_000.mp3",  # 1st -> D
+    "out_008.mp3",  # 2nd -> I  (small saw it, medium missed it, so we keep small's value)
+    "out_009.mp3",  # 3rd -> O
+    "out_025.mp3",  # 1st of keyword #2 (in small run)
+    "out_026.mp3",  # 5th -> G
+    "out_062.mp3",  # 6th -> I
 ]
 
-# use medium only here
-model = WhisperModel("medium")  # will load ~1.5GB, but gives better text
+model = WhisperModel("medium")
 
-p_num = re.compile(
-    r"The\s+(\d+)(st|nd|rd|th)\s+letter(?:\s+(?:in|of|and)\s+keyword)?\s+is\s+(.+)",
+# accept "is" with comma or colon
+re_main = re.compile(
+    r"The\s+(?P<ord>(\d+|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth))\s+letter"
+    r"(?:\s+(?:in|of|and)\s+keyword)?\s+is[ ,:]+(?P<rest>.+)",
     re.IGNORECASE,
 )
-p_word = re.compile(
-    r"The\s+(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+letter(?:\s+(?:in|of|and)\s+keyword)?\s+is\s+(.+)",
+
+# accept the warped line: "The password and keyword is g-golf."
+re_password = re.compile(
+    r"The\s+password\s+(?:in|of|and)\s+keyword\s+is[ ,:]+(?P<rest>.+)",
     re.IGNORECASE,
 )
 
@@ -44,11 +49,11 @@ def extract_letter(rest: str):
     m = re.match(r"([A-Z])\s*[-,–]\s*", rest)
     if m:
         return m.group(1).upper()
-    # starts with single capital
+    # Starts with single capital
     m = re.match(r"([A-Z])\b", rest)
     if m:
         return m.group(1).upper()
-    # first standalone capital
+    # First standalone capital
     m = re.search(r"\b([A-Z])\b", rest)
     if m:
         return m.group(1).upper()
@@ -64,30 +69,53 @@ for fname in FILES:
         text = seg.text.strip()
         print(f"  [{seg.start:6.2f}-{seg.end:6.2f}] {text!r}")
 
-        m1 = p_num.search(text)
-        m2 = p_word.search(text)
+        m = re_main.search(text)
+        if m:
+            ord_raw = m.group("ord")
+            rest = m.group("rest")
+            if ord_raw.isdigit():
+                idx = int(ord_raw)
+            else:
+                idx = ord_map[ord_raw.lower()]
+            letter = extract_letter(rest)
+            if letter:
+                print(f"    -> HIT idx={idx} letter={letter} text={text!r}")
+                results.append({
+                    "file": fname,
+                    "index": idx,
+                    "letter": letter,
+                    "raw": text,
+                })
+            continue  # processed
 
-        idx = None
-        letter = None
+        m = re_password.search(text)
+        if m:
+            rest = m.group("rest")
+            letter = extract_letter(rest)
+            if letter:
+                # treat "password" as 5th
+                idx = 5
+                print(f"    -> HIT idx={idx} letter={letter} text={text!r}")
+                results.append({
+                    "file": fname,
+                    "index": idx,
+                    "letter": letter,
+                    "raw": text,
+                })
 
-        if m1:
-            idx = int(m1.group(1))
-            letter = extract_letter(m1.group(3))
-        elif m2:
-            idx = ord_map[m2.group(1).lower()]
-            letter = extract_letter(m2.group(2))
+# merge with the small-model hit:
+# small said: out_008 -> "The second letter in keyword is I India."
+results.append({
+    "file": "out_008.mp3",
+    "index": 2,
+    "letter": "I",
+    "raw": "The second letter in keyword is I India.  (from small run)"
+})
 
-        if idx is not None and letter is not None:
-            print(f"    -> HIT idx={idx} letter={letter} text={text!r}")
-            results.append({
-                "file": fname,
-                "index": idx,
-                "letter": letter,
-                "raw": text,
-            })
+results.sort(key=lambda x: (x["index"], x["file"]))
 
-results.sort(key=lambda x: x["index"])
-flag = "".join(r["letter"] for r in results)
+keyword1 = "".join([r["letter"] for r in results if r["index"] in (1,2,3)])
+print("\nKEYWORD #1:", keyword1)
 
-print("\nFLAG:", flag)
+print("\nALL HITS:")
 print(json.dumps(results, indent=2))
