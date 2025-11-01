@@ -1,0 +1,27 @@
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Large model files
+*.pt
+*.pth
+*.onnx
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output files
+output/
