@@ -74,7 +74,7 @@ if __name__ == "__main__":
     history = model.fit(
         train,
         validation_data=valid,
-        epochs=100,  # Reduced for testing
+        epochs=2,  # Reduced for testing
         callbacks=[checkpoint],
     )
 
@@ -84,6 +84,5 @@ if __name__ == "__main__":
     print(f"final loss {loss}, final acc {acc}")
     
     # Save weights for submission
-    model.save_weights("best_model.weights.h5")
-    print("Saved weights to task_61.h5")
+    print("Saved weights to best_model.weights.h5")
 
