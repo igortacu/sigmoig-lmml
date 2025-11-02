@@ -1,7 +1,7 @@
 task: classify
 mode: train
 model: yolov8n-cls.pt
-data: C:\Users\Ina\Desktop\sigmoig-lmml\Romania\data\data\coke_fanta_sprite
+data: C:\Users\Ina\Desktop\sigmoig-lmml\Romania\data\data\coke_fanta_sprite_224_normalized
 epochs: 5
 time: null
 patience: 20
@@ -12,7 +12,7 @@ save_period: -1
 cache: false
 device: cpu
 workers: 8
-project: C:\Users\Ina\Desktop\sigmoig-lmml\Romania\data\data\coke_fanta_sprite\runs
+project: C:\Users\Ina\Desktop\sigmoig-lmml\Romania\data\data\coke_fanta_sprite_224\runs
 name: cls
 exist_ok: true
 pretrained: true
@@ -103,4 +103,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\Ina\Desktop\sigmoig-lmml\Romania\data\data\coke_fanta_sprite\runs\cls
+save_dir: C:\Users\Ina\Desktop\sigmoig-lmml\Romania\data\data\coke_fanta_sprite_224\runs\cls
