@@ -2,21 +2,21 @@
 
 **Difficulty:** Medium
 
-## 📖 Task Overview
+## Task Overview
 
 The year is 2042. Attention Analytics has discovered encrypted messages hidden in time series datasets. This folder contains tools to process and visualize forecasting data to reveal a hidden word that appears when properly plotted.
 
-## 🎯 Objective
+## Objective
 
 Process and visualize the provided time series dataset to reveal a hidden word using binary per-row median thresholding and transposed visualization.
 
-## 🚩 FLAG Format
+## FLAG Format
 
 `SIGMOID_{HIDDEN_WORD}`
 
 Where `HIDDEN_WORD` is the word revealed in the visualization.
 
-## 📂 Dataset
+##  Dataset
 
 - Location: `Brazil/task_25/`
 - Files: `dataset_part_1.csv` through `dataset_part_5.csv`
@@ -26,7 +26,7 @@ Where `HIDDEN_WORD` is the word revealed in the visualization.
   - `value` (primary numeric series)
   - `noise_level` (noise metric)
 
-## 🛠️ Scripts
+##  Scripts
 
 ### 1. `merge_total.py`
 Concatenates all dataset parts into a single CSV.
@@ -101,7 +101,7 @@ python scatter_all.py
 ```
 View the filtered time series scatter; pattern may be visible in the distribution.
 
-## 📊 Data Processing Pipeline
+## Data Processing Pipeline
 
 1. **Load** all CSV parts from `task_25/`
 2. **Detect** id, timestamp, and numeric columns automatically
@@ -111,7 +111,7 @@ View the filtered time series scatter; pattern may be visible in the distributio
 6. **Downsample** (optional) for readability
 7. **Render** as grayscale or ASCII art
 
-## 💡 Tips
+## Tips
 
 - The hidden word is most visible in the **per-row median binary** visualization
 - Try both `value` and `noise_level` columns
@@ -119,7 +119,7 @@ View the filtered time series scatter; pattern may be visible in the distributio
 - The pattern emerges from the collective behavior of all time series
 - Sorting and filtering can help isolate the signal
 
-## 📝 Requirements
+## Requirements
 
 - Python 3.10+
 - pandas
@@ -131,14 +131,14 @@ Install dependencies:
 pip install pandas numpy matplotlib
 ```
 
-## 🎁 Outputs
+## Outputs
 
 - `task_25/total.csv` — merged dataset
 - `task_25/scatter_all.png` — filtered scatter plots
 - Terminal ASCII art from `reveal.py`
-- Matplotlib figures from `main.py`
 
-## 🚀 Quick Start
+
+## Quick Start
 
 ```powershell
 # 1. Merge all parts (optional)

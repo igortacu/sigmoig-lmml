@@ -46,7 +46,7 @@ def main():
     df[time_col] = pd.to_datetime(df[time_col], errors="coerce")
     df = df.dropna(subset=[time_col])
 
-    # Filter: noise_level < 0.3
+    # Filter
     if "noise_level" in df.columns:
         df = df[df["noise_level"] < 0.3].copy()
         print(f"[INFO] Filtered to {len(df):,} rows with noise_level < 0.3")
