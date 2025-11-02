@@ -74,7 +74,7 @@ if __name__ == "__main__":
     history = model.fit(
         train,
         validation_data=valid,
-        epochs=2,  # Reduced for testing
+        epochs=100,  
         callbacks=[checkpoint],
     )
 

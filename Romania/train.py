@@ -1,24 +1,8 @@
-"""
-Optimized YOLOv8 Classification Training for Cola/Fanta/Sprite
-Single file solution with >90% accuracy target
-"""
 import sys
 import shutil
 import argparse
 from pathlib import Path
-
-
 def train_yolo_classifier(data_dir, epochs=100, imgsz=224, batch=16, model='yolov8n-cls.pt'):
-    """
-    Train YOLOv8 classification model with optimized parameters.
-    
-    Args:
-        data_dir: Path to dataset with train/val/test folders
-        epochs: Number of training epochs (default: 100)
-        imgsz: Image size (default: 224)
-        batch: Batch size (default: 16)
-        model: Base model to use (default: yolov8n-cls.pt)
-    """
     try:
         from ultralytics import YOLO
         import torch
@@ -55,7 +39,7 @@ def train_yolo_classifier(data_dir, epochs=100, imgsz=224, batch=16, model='yolo
     print(f"Loading model: {model}")
     yolo = YOLO(model)
     
-    # Optimized training parameters for >90% accuracy
+   
     print(f"\nStarting training:")
     print(f"  Dataset: {data_dir}")
     print(f"  Epochs: {epochs}")
@@ -68,81 +52,67 @@ def train_yolo_classifier(data_dir, epochs=100, imgsz=224, batch=16, model='yolo
         imgsz=imgsz,
         batch=batch,
         device=device,
-        # Optimized hyperparameters
-        lr0=0.001,              # Lower initial learning rate for stability
-        lrf=0.001,              # Final learning rate
-        momentum=0.937,         # SGD momentum
-        weight_decay=0.0005,    # Weight decay for regularization
-        warmup_epochs=3,        # Warmup epochs
-        warmup_momentum=0.8,    # Warmup momentum
-        box=7.5,                # Not used in classification but kept for compatibility
-        cls=0.5,                # Classification loss weight
-        dfl=1.5,                # Not used in classification
-        dropout=0.0,            # No dropout (small dataset)
-        optimizer='SGD',        # SGD optimizer
-        patience=50,            # Early stopping patience
+        
+        lr0=0.001,              
+        lrf=0.001,              
+        momentum=0.937,        
+        weight_decay=0.0005,   
+        warmup_epochs=3,       
+        warmup_momentum=0.8,   
+        box=7.5,               
+        cls=0.5,                
+        dfl=1.5,                
+        dropout=0.0,            
+        optimizer='SGD',       
+        patience=50,            
         save=True,
-        save_period=-1,         # Save only last and best
+        save_period=-1,         
         plots=True,
         verbose=True,
         project=str(Path(__file__).parent / 'runs'),
         name='train',
         exist_ok=True,
-        pretrained=True,        # Use pretrained weights
-        val=True,               # Validate during training
-        augment=True,           # Use augmentations
+        pretrained=True,        
+        val=True,             
+        augment=True,          
     )
     
-    # Save best model to model.pt
     output_model = Path(__file__).parent / 'model.pt'
     weights_path = Path(results.save_dir) / 'weights' / 'best.pt'
     
     if not weights_path.exists():
-        # Fallback to last.pt if best doesn't exist
         weights_path = Path(results.save_dir) / 'weights' / 'last.pt'
     
     if weights_path.exists():
         shutil.copy2(weights_path, output_model)
         print(f"\n✓ Model saved to: {output_model}")
-    else:
-        print(f"\nWARNING: Could not find weights file")
         return
     
-    # Test on test set if available
+
     test_dir = data_dir / 'test'
     if test_dir.exists():
         print("\nEvaluating on test set...")
         metrics = yolo.val(data=str(data_dir), split='test')
         
-        # Extract accuracy
+
         if hasattr(metrics, 'top1'):
             accuracy = metrics.top1
             print(f"Test Accuracy: {accuracy:.2f}%")
             
             if accuracy >= 90:
-                print("✓ TARGET ACHIEVED: >90% accuracy!")
-            else:
-                print(f"⚠ Below target. Got {accuracy:.2f}%, need ≥90%")
-                print("TIP: Try increasing epochs or using yolov8s-cls.pt")
+                print(" TARGET ACHIEVED: >90% accuracy!")
     
     return output_model
 
 
 def normalize_dataset(source_dir):
-    """
-    Create normalized copy of dataset with lowercase class names.
-    Maps Coke -> cola, keeps fanta and sprite lowercase.
-    """
     source_dir = Path(source_dir)
     target_dir = source_dir.parent / f"{source_dir.name}_normalized"
-    
     print(f"Normalizing dataset from {source_dir} to {target_dir}")
-    
-    # Remove old normalized folder
+   
     if target_dir.exists():
         shutil.rmtree(target_dir)
     
-    # Process each split
     for split in ['train', 'val', 'test']:
         split_src = source_dir / split
         if not split_src.exists():
@@ -150,25 +120,22 @@ def normalize_dataset(source_dir):
         
         split_dst = target_dir / split
         split_dst.mkdir(parents=True, exist_ok=True)
-        
-        # Process each class folder
+
         for class_folder in split_src.iterdir():
             if not class_folder.is_dir():
                 continue
-            
-            # Normalize class name
+        
             old_name = class_folder.name
             new_name = old_name.lower()
             
-            # Map Coke/Cola to cola
+        
             if 'coke' in new_name or 'cola' in new_name:
                 new_name = 'cola'
             
-            # Create target class folder
             class_dst = split_dst / new_name
             class_dst.mkdir(exist_ok=True)
             
-            # Copy all images
+
             file_count = 0
             for img_file in class_folder.iterdir():
                 if img_file.is_file() and img_file.suffix.lower() in ['.jpg', '.jpeg', '.png']:

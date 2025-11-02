@@ -63,7 +63,7 @@ python Romania/predict.py path/to/image.jpg --model model.pt --device cpu
 
 **Output:** Single lowercase word: `cola`, `fanta`, or `sprite`
 
-The prediction script automatically normalizes class names to lowercase regardless of how the training folders were named (handles Coke/Cola/coke variations).
+The prediction script automatically normalizes class names to lowercase regardless of how the training folders were named.
 
 ## Results
 
