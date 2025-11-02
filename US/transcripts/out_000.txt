@@ -1,0 +1,22 @@
+[out_000.mp3 0.00-9.70] Hello there. Don't listen to the audio. It's rather long. Use the power of programming.
+[out_000.mp3 9.70-16.32] One, two, three, four.
+[out_000.mp3 16.32-18.32] 二,三,四.
+[out_000.mp3 18.32-20.32] 一,二,三, four.
+[out_000.mp3 20.32-26.32] Loram ipsum is simply dummy text of the printing and typesetting industry.
+[out_000.mp3 26.32-33.32] Loram ipsum has been the industry's standard dummy text ever since the 1500s,
+[out_000.mp3 33.32-39.32] when an unknown printer took a galley of type and scrambled it to make a type specimen book.
+[out_000.mp3 39.32-46.32] It has survived not only five centuries, but also the leap into electronic typesetting,
+[out_000.mp3 46.32-49.32] remaining essentially unchanged.
+[out_000.mp3 49.32-57.32] It was popularized in the 1960s with the release of letter set sheets containing Loram ipsum passages,
+[out_000.mp3 57.32-67.32] and more recently with desktop publishing software like Aldous PageMaker, including versions of Loram ipsum.
+[out_000.mp3 67.32-71.32] The first letter and keyword is D-Delta.
+[out_000.mp3 71.32-76.32] The right hasta, D-Delta is in the Doc.
+[out_000.mp3 84.32-92.32] In Age of deviants, Loram ipsum is the US modern technology for army usefulness,
+[out_000.mp3 92.32-97.32] and anywhere else in the United States for example,
+[out_000.mp3 97.32-101.32] and more recently with desktop publishing software like Aldous PageMaker,
+[out_000.mp3 101.32-103.32] including versions of Loram Ipsum.
+[out_000.mp3 104.32-108.32] Loram Ipsum is simply dummy text of the printing and typesetting industry.
+[out_000.mp3 108.32-113.32] Loram Ipsum has been the industry's standard dummy text ever since the 1500s,
+[out_000.mp3 113.32-118.32] when an unknown printer took a galley of type and scrambled it to make a type specimen book.
+[out_000.mp3 118.32-123.32] It has survived not only five centuries, but also the leap into electronic typesetting,
+[out_000.mp3 123.32-125.32] remaining essentially unchanged.

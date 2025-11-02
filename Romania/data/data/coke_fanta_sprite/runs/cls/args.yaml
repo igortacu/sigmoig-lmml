@@ -2,7 +2,7 @@ task: classify
 mode: train
 model: yolov8n-cls.pt
 data: C:\Users\Ina\Desktop\sigmoig-lmml\Romania\data\data\coke_fanta_sprite
-epochs: 2
+epochs: 5
 time: null
 patience: 20
 batch: 32

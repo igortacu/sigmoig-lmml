@@ -53,10 +53,23 @@ Run a very short training (sanity check):
 python Romania/train_cls.py --epochs 1 --batch 8 --imgsz 224 --device cpu
 ```
 
+## Predict on New Images
+
+Use the trained model to classify a single image:
+
+```powershell
+python Romania/predict.py path/to/image.jpg --model model.pt --device cpu
+```
+
+**Output:** Single lowercase word: `cola`, `fanta`, or `sprite`
+
+The prediction script automatically normalizes class names to lowercase regardless of how the training folders were named (handles Coke/Cola/coke variations).
+
 ## Results
 
 - Training artifacts: `Romania/data/coke_fanta_sprite/runs/cls/` (metrics, confusion matrices, etc.).
 - Best model copied to: `Romania/model.pt`.
+- **Output format:** The model predicts one of three classes: `cola`, `fanta`, `sprite` (lowercase)
 
 ## Tips for >90% accuracy
 

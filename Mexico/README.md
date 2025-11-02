@@ -2,7 +2,7 @@
 
 **Difficulty:** Medium
 
-## 📖 Task Overview
+## Task Overview
 
 This challenge tests your understanding of word embeddings and vector space semantics. You'll train word vectors on a provided corpus and solve word analogies of the form:
 
@@ -10,17 +10,17 @@ This challenge tests your understanding of word embeddings and vector space sema
 
 Using vector arithmetic: `vec(A) - vec(B) + vec(C) ≈ vec(D)`
 
-## 🎯 Objective
+## Objective
 
 Train word embeddings (Word2Vec or PPMI-SVD) on the provided corpus and solve two word analogies to generate the flag.
 
-## 🚩 FLAG Format
+## FLAG Format
 
 `SIGMOID_{WORD1}_{WORD2}`
 
 Where WORD1 and WORD2 are the solutions to the two analogies (uppercase).
 
-## 📂 Files
+## Files
 
 ### `corpus.txt`
 A carefully crafted text corpus (83 lines) containing repetitive sentences about:
@@ -37,7 +37,7 @@ Complete word embedding trainer and analogy solver with two backends:
 1. **Gensim Word2Vec** (preferred if gensim is installed)
 2. **PPMI-SVD** (fallback - no external dependencies)
 
-## 🧠 How Word Embeddings Work
+## How Word Embeddings Work
 
 ### The Core Idea
 
@@ -86,7 +86,7 @@ Captures semantic relationships through neural prediction of context words.
 
 Both methods create a vector space where semantic relationships become geometric.
 
-## 📋 The Two Analogies
+## The Two Analogies
 
 ### Analogy 1
 ```
@@ -123,9 +123,9 @@ python vector.py
 {
   "analogy_1": "doctors - medicine + law = engineers",
   "analogy_2": "teachers - schools + hospitals = athletes",
-  "flag": "SIGMOID_ENGINEERS_ATHLETES"
+  "flag": "SIGMOID_x_x"
 }
-SIGMOID_ENGINEERS_ATHLETES
+
 ```
 
 ## 🔍 How It Works (Step by Step)
@@ -157,7 +157,7 @@ SIGMOID_ENGINEERS_ATHLETES
 
 6. **Generate flag:** `SIGMOID_{answer1.upper()}_{answer2.upper()}`
 
-## 📊 Why This Corpus Works
+##  Why This Corpus Works
 
 The corpus is structured to create strong associations:
 
@@ -209,7 +209,7 @@ result = vector.solve_analogy(vecs, "doctors", "medicine", "law")
 print(f"doctors - medicine + law = {result}")
 ```
 
-## 💡 Common Issues & Solutions
+## Common Issues & Solutions
 
 **Problem:** "Token missing from vocab"
 - **Cause:** Word not in corpus
@@ -226,7 +226,7 @@ print(f"doctors - medicine + law = {result}")
 - **Cause:** Random initialization (less common with SEED=42)
 - **Solution:** Fixed seed should stabilize results; gensim backend more stable
 
-## 📚 Background Concepts
+##  Background Concepts
 
 ### Word2Vec Skip-gram
 Given a target word, predicts context words within window. Example:
@@ -250,7 +250,7 @@ Measures how much more often two words co-occur than expected by chance:
 ### SVD (Singular Value Decomposition)
 Reduces sparse high-dimensional PPMI matrix to dense low-dimensional embeddings while preserving most variance.
 
-## 🎓 Learning Outcomes
+## Learning Outcomes
 
 - Understanding distributional semantics ("You shall know a word by the company it keeps")
 - Vector space representations of meaning
@@ -258,12 +258,12 @@ Reduces sparse high-dimensional PPMI matrix to dense low-dimensional embeddings 
 - Word2Vec and count-based embedding methods
 - Cosine similarity for semantic comparison
 
-## 🎁 Output Files
+## Output Files
 
 - **None** (flag printed to stdout)
 - Optional: Add code to save embeddings as JSON/numpy if needed
 
-## ⚙️ Customization
+## Customization
 
 ### Change embeddings dimension:
 ```python

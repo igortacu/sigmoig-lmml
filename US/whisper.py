@@ -1,36 +1,24 @@
+#!/usr/bin/env python3
 import os
 import re
+import time
 import json
 from faster_whisper import WhisperModel
 
 CHUNK_DIR = "chunks"
+FAST_MODEL = "tiny.en"   # small, fast, good for detection
+SLOW_MODEL = "medium"    # more accurate, used only on hits
 
-# run medium only on the files we know have something
-FILES = [
-    "out_000.mp3",  # 1st -> D
-    "out_008.mp3",  # 2nd -> I  (small saw it, medium missed it, so we keep small's value)
-    "out_009.mp3",  # 3rd -> O
-    "out_025.mp3",  # 1st of keyword #2 (in small run)
-    "out_026.mp3",  # 5th -> G
-    "out_062.mp3",  # 6th -> I
-]
-
-model = WhisperModel("medium")
-
-# accept "is" with comma or colon
-re_main = re.compile(
-    r"The\s+(?P<ord>(\d+|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth))\s+letter"
-    r"(?:\s+(?:in|of|and)\s+keyword)?\s+is[ ,:]+(?P<rest>.+)",
+# patterns for detection
+PAT_NUM = re.compile(
+    r"The\s+(\d+)(st|nd|rd|th)\s+letter\s+(?:in|of|and)\s+keyword\s+is\s+(.+)",
     re.IGNORECASE,
 )
-
-# accept the warped line: "The password and keyword is g-golf."
-re_password = re.compile(
-    r"The\s+password\s+(?:in|of|and)\s+keyword\s+is[ ,:]+(?P<rest>.+)",
+PAT_WORD = re.compile(
+    r"The\s+(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+letter\s+(?:in|of|and)\s+keyword\s+is\s+(.+)",
     re.IGNORECASE,
 )
-
-ord_map = {
+ORD_MAP = {
     "first": 1,
     "second": 2,
     "third": 3,
@@ -45,77 +33,170 @@ ord_map = {
 
 def extract_letter(rest: str):
     rest = rest.strip()
-    # D-Delta / D, Delta / D – Delta
+    # "D-Delta", "D, Delta", "D – Delta"
     m = re.match(r"([A-Z])\s*[-,–]\s*", rest)
     if m:
-        return m.group(1).upper()
-    # Starts with single capital
+        return m.group(1)
+    # "D delta"
     m = re.match(r"([A-Z])\b", rest)
     if m:
-        return m.group(1).upper()
-    # First standalone capital
+        return m.group(1)
+    # last resort
     m = re.search(r"\b([A-Z])\b", rest)
     if m:
-        return m.group(1).upper()
+        return m.group(1)
     return None
 
-results = []
-
-for fname in FILES:
-    path = os.path.join(CHUNK_DIR, fname)
-    print(f"=== {fname} ===")
-    segments, _ = model.transcribe(path, language="en")
+def detect_hits_in_segments(fname, segments, pass_id):
+    hits = []
+    seg_idx = 0
     for seg in segments:
+        seg_idx += 1
         text = seg.text.strip()
-        print(f"  [{seg.start:6.2f}-{seg.end:6.2f}] {text!r}")
+        print(f"    [{pass_id} {fname} seg{seg_idx:03d} {seg.start:6.2f}-{seg.end:6.2f}] {text}")
 
-        m = re_main.search(text)
-        if m:
-            ord_raw = m.group("ord")
-            rest = m.group("rest")
-            if ord_raw.isdigit():
-                idx = int(ord_raw)
-            else:
-                idx = ord_map[ord_raw.lower()]
+        idx = None
+        letter = None
+
+        m1 = PAT_NUM.search(text)
+        if m1:
+            idx = int(m1.group(1))
+            rest = m1.group(3)
             letter = extract_letter(rest)
+        else:
+            m2 = PAT_WORD.search(text)
+            if m2:
+                idx = ORD_MAP.get(m2.group(1).lower())
+                rest = m2.group(2)
+                letter = extract_letter(rest)
+
+        # also catch your ASR oddity: "password and keyword is G-Golf."
+        if "keyword is" in text.lower() and idx is None:
+            # try to guess number from context? leave idx=None, still store
+            letter = extract_letter(text.split("keyword is", 1)[1])
+            # mark index unknown
             if letter:
-                print(f"    -> HIT idx={idx} letter={letter} text={text!r}")
-                results.append({
+                hits.append({
                     "file": fname,
-                    "index": idx,
+                    "index": None,
                     "letter": letter,
                     "raw": text,
+                    "start": seg.start,
+                    "end": seg.end,
                 })
-            continue  # processed
+                print(f"      -> HIT (no index) letter={letter} text={text!r}")
+                continue
 
-        m = re_password.search(text)
-        if m:
-            rest = m.group("rest")
-            letter = extract_letter(rest)
-            if letter:
-                # treat "password" as 5th
-                idx = 5
-                print(f"    -> HIT idx={idx} letter={letter} text={text!r}")
-                results.append({
-                    "file": fname,
-                    "index": idx,
-                    "letter": letter,
-                    "raw": text,
-                })
+        if idx is not None and letter is not None:
+            hit = {
+                "file": fname,
+                "index": idx,
+                "letter": letter,
+                "raw": text,
+                "start": seg.start,
+                "end": seg.end,
+            }
+            hits.append(hit)
+            print(f"      -> HIT idx={idx} letter={letter} text={text!r}")
+    return hits
 
-# merge with the small-model hit:
-# small said: out_008 -> "The second letter in keyword is I India."
-results.append({
-    "file": "out_008.mp3",
-    "index": 2,
-    "letter": "I",
-    "raw": "The second letter in keyword is I India.  (from small run)"
-})
+def main():
+    if not os.path.isdir(CHUNK_DIR):
+        print("folder 'chunks' missing")
+        return
 
-results.sort(key=lambda x: (x["index"], x["file"]))
+    files = sorted(f for f in os.listdir(CHUNK_DIR) if f.endswith(".mp3"))
+    total = len(files)
+    print(f"found {total} audio chunks")
 
-keyword1 = "".join([r["letter"] for r in results if r["index"] in (1,2,3)])
-print("\nKEYWORD #1:", keyword1)
+    # ---------- PASS 1: fast detector ----------
+    print("\n=== PASS 1: fast detection (tiny.en) ===")
+    fast_model = WhisperModel(
+        FAST_MODEL,
+        device="cpu",
+        compute_type="int8",   # faster on CPU
+    )
 
-print("\nALL HITS:")
-print(json.dumps(results, indent=2))
+    rough_hits = []     # chunks to re-run
+    all_fast_hits = []  # for debug
+
+    for i, fname in enumerate(files, 1):
+        path = os.path.join(CHUNK_DIR, fname)
+        t0 = time.time()
+        print(f"[{i}/{total}] {fname} (fast)")
+
+        segments, _ = fast_model.transcribe(
+            path,
+            language="en",
+            beam_size=1,           # speed
+            vad_filter=True,
+        )
+        hits = detect_hits_in_segments(fname, segments, pass_id="FAST")
+        dt = time.time() - t0
+        print(f"  -> {len(hits)} hits, time={dt:.2f}s")
+
+        if hits:
+            rough_hits.append(fname)
+            all_fast_hits.extend(hits)
+
+    print("\nFAST PASS hits:")
+    print(json.dumps(all_fast_hits, indent=2))
+
+    if not rough_hits:
+        print("\nno hits in pass 1. stop.")
+        return
+
+    # ---------- PASS 2: accurate on hit files ----------
+    print("\n=== PASS 2: accurate on hit files (medium) ===")
+    slow_model = WhisperModel(
+        SLOW_MODEL,
+        device="cpu",
+        compute_type="float32",   # accurate
+    )
+
+    final_hits = []
+    for fname in rough_hits:
+        path = os.path.join(CHUNK_DIR, fname)
+        print(f"\nre-scan {fname} (slow)")
+        t0 = time.time()
+        segments, _ = slow_model.transcribe(
+            path,
+            language="en",
+            beam_size=5,
+            best_of=5,
+            vad_filter=True,
+        )
+        hits = detect_hits_in_segments(fname, segments, pass_id="SLOW")
+        dt = time.time() - t0
+        print(f"  -> {len(hits)} refined hits, time={dt:.2f}s")
+        final_hits.extend(hits)
+
+    # ---------- assemble keywords ----------
+    # group by index; sort; show gaps
+    final_hits.sort(key=lambda x: (x["index"] is None, x["index"]))
+
+    print("\n=== FINAL HITS (sorted) ===")
+    print(json.dumps(final_hits, indent=2))
+
+    # guess keyword from known indexes
+    letters_by_idx = {}
+    for h in final_hits:
+        if h["index"] is not None:
+            letters_by_idx[h["index"]] = h["letter"]
+
+    if letters_by_idx:
+        max_idx = max(letters_by_idx)
+        keyword = []
+        for i in range(1, max_idx + 1):
+            ch = letters_by_idx.get(i, "?")
+            keyword.append(ch)
+        print("\nKEYWORD (best guess):", "".join(keyword))
+    else:
+        print("\nno indexed letters found")
+
+    # write to file for manual search
+    with open("hits.json", "w", encoding="utf-8") as f:
+        json.dump(final_hits, f, indent=2)
+
+if __name__ == "__main__":
+    main()
