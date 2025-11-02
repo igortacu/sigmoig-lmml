@@ -20,8 +20,13 @@ import numpy as np
 from PIL import Image, ImageOps
 import random
 
+<<<<<<< HEAD
 
 # ------------------- helpers -------------------
+=======
+pytesseract.pytesseract.tesseract_cmd = './Tesseract-OCR/tesseract.exe'
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+>>>>>>> origin/main
 
 def load_rgb(path: str) -> Image.Image:
     return Image.open(path).convert("RGB")

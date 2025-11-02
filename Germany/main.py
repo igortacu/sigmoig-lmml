@@ -4,7 +4,7 @@ from pyzbar.pyzbar import decode
 import os
 import requests 
 
-GERMANY_PATH = r'D:\FAF\Hackaton\LLML Sigmoid\sigmoig-lmml\Germany'
+GERMANY_PATH = os.path.dirname(os.path.abspath(__file__))
 
 def clean_qr(binary_img):
     # Remove tiny noise dots
