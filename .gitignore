@@ -9,7 +9,6 @@
 
 # Image files
 
-
 # Large model files
 *.pt
 *.pth
