@@ -1,34 +1,33 @@
-# infer.py  (consistent with train_char.py)
 import os, csv
-from PIL import Image, ImageFilter
 import numpy as np
+from PIL import Image, ImageFilter
 import torch
 import torchvision.transforms as T
+from seed_labels import SEED
 
 TEST_DIR = "data/task_32/images"
-CKPT_PATH = "char_cnn.pt"
-OUT_CSV = "submission.csv"
+CKPT = "char_from_seed.pt"
+OUT = "submission.csv"
 
-# ----- model definition must match train_char.py -----
+ckpt = torch.load(CKPT, map_location="cpu")
+classes = ckpt["classes"]
+
 class CharNet(torch.nn.Module):
-    def __init__(self, n_classes):
+    def __init__(self, n_cls):
         super().__init__()
         self.net = torch.nn.Sequential(
             torch.nn.Conv2d(1, 32, 3, 1, 1), torch.nn.ReLU(), torch.nn.MaxPool2d(2, 2),
             torch.nn.Conv2d(32, 64, 3, 1, 1), torch.nn.ReLU(), torch.nn.MaxPool2d(2, 2),
             torch.nn.Conv2d(64, 128, 3, 1, 1), torch.nn.ReLU(),
         )
-        self.fc = torch.nn.Linear(128 * 16 * 16, n_classes)
+        self.fc = torch.nn.Linear(128 * 16 * 16, n_cls)
 
     def forward(self, x):
         x = self.net(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
-# -----------------------------------------------------
 
-ckpt = torch.load(CKPT_PATH, map_location="cpu")
-classes = ckpt["classes"]
 model = CharNet(len(classes))
 model.load_state_dict(ckpt["model"])
 model.eval()
@@ -39,7 +38,6 @@ tf = T.Compose([
     T.ToTensor(),
 ])
 
-
 def preprocess(pil_img, h=64):
     img = pil_img.convert("L")
     w, old_h = img.size
@@ -48,14 +46,13 @@ def preprocess(pil_img, h=64):
     img = img.filter(ImageFilter.GaussianBlur(radius=0.3))
     return img
 
-
 def segment_8(pil_img):
     img_np = np.array(pil_img)
     H, W = img_np.shape
     thr = 200
     binm = (img_np < thr).astype(np.uint8)
     proj = binm.sum(axis=0)
-    smooth = np.convolve(proj, np.ones(5) / 5, mode="same")
+    smooth = np.convolve(proj, np.ones(5)/5, mode="same")
 
     boxes = []
     step = W / 8.0
@@ -71,17 +68,22 @@ def segment_8(pil_img):
         nz = np.where(sl > 0)[0]
         lx = nz[0] + x0
         rx = nz[-1] + x0 + 1
-        # small padding
-        lx = max(lx - 1, 0)
-        rx = min(rx + 1, W)
+        lx = max(0, lx - 1)
+        rx = min(W, rx + 1)
         boxes.append((lx, 0, rx, H))
     return boxes
 
-
 rows = [("filename", "answer")]
 
+# first 21 – trusted labels
+for fname, ans in SEED.items():
+    rows.append((fname, ans))
+
+# rest – predict
 for fname in sorted(os.listdir(TEST_DIR)):
     if not fname.endswith(".png"):
+        continue
+    if fname in SEED:
         continue
 
     pil = Image.open(os.path.join(TEST_DIR, fname))
@@ -99,7 +101,7 @@ for fname in sorted(os.listdir(TEST_DIR)):
 
     rows.append((fname, "".join(chars)))
 
-with open(OUT_CSV, "w", newline="", encoding="utf-8") as f:
+with open(OUT, "w", newline="", encoding="utf-8") as f:
     csv.writer(f).writerows(rows)
 
-print("submission.csv written.")
+print("[ok] wrote submission.csv")

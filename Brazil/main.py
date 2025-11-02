@@ -3,93 +3,120 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+plt.close("all")
+
+# 1) load
 data_dir = Path("task_25")
-files = sorted(data_dir.glob("dataset_part_*.csv"))
-if not files:
-    raise SystemExit("no csv files")
+parts = sorted(data_dir.glob("dataset_part_*.csv"))
+df = pd.concat([pd.read_csv(p) for p in parts], ignore_index=True)
 
-dfs = [pd.read_csv(f) for f in files]
-df = pd.concat(dfs, ignore_index=True)
+# 2) detect columns
+series_cols = [c for c in df.columns
+               if c.lower() in ("series", "unique_id", "id", "item_id")
+               or c.lower().startswith(("series", "unique", "item"))]
+if not series_cols:
+    raise SystemExit(df.columns)
+series_col = series_cols[0]
 
-# detect id column
-id_col = None
-for name in ("unique_id", "series_id", "id", "item_id", "segment"):
-    if name in df.columns:
-        id_col = name
-        break
-if id_col is None:
-    df["__id"] = 0
-    id_col = "__id"
+time_cols = [c for c in df.columns if c not in (series_col, "value", "noise_level")]
+if time_cols:
+    df = df.sort_values([series_col, time_cols[0]])
+else:
+    df = df.sort_values([series_col])
 
-# detect time column
-time_col = None
-for name in ("ds", "date", "timestamp", "time"):
-    if name in df.columns:
-        time_col = name
-        break
-if time_col is None:
-    time_col = df.columns[0]
+# 3) build matrix from noise_level  ← this is the thing that showed the staircase
+series_ids = df[series_col].unique().tolist()
+rows = []
+for sid in series_ids:
+    part = df[df[series_col] == sid]
+    sig = part["noise_level"].to_numpy(float)
+    rows.append(sig)
 
-# numeric columns only
-num_cols = [c for c in df.columns if c not in (id_col, time_col)]
-print("numeric columns:", num_cols)
+max_len = max(len(r) for r in rows)
+M = len(rows)
 
-def build_matrix(col):
-    rows = []
-    for sid, g in df.groupby(id_col):
-        g = g.sort_values(time_col)
-        rows.append(g[col].to_numpy(dtype=float))
-    max_len = max(len(r) for r in rows)
-    mat = np.full((len(rows), max_len), np.nan)
-    for i, r in enumerate(rows):
-        mat[i, :len(r)] = r
-    return mat
+mat = np.full((M, max_len), np.nan, dtype=float)
+for i, r in enumerate(rows):
+    mat[i, :len(r)] = r
 
-for col in num_cols:
-    mat = build_matrix(col)
-    mask = ~np.isnan(mat)
-    vals = mat[mask]
+# 4) align to row 0 with cross-corr
+ref = mat[0]
+ref = np.where(np.isnan(ref), np.nanmean(ref), ref)
 
-    # 1) raw
-    mn, mx = vals.min(), vals.max()
-    norm = (mat - mn) / (mx - mn)
-    norm[~mask] = 1.0
+aligned = np.full_like(mat, np.nan)
 
-    plt.figure(figsize=(7,4))
-    plt.imshow(norm, cmap="gray", aspect="auto", interpolation="nearest")
-    plt.title(f"{col} – raw")
-    plt.tight_layout()
+aligned[0] = ref
+max_shift = 250  # increase if your series are longer
 
-    # 2) global binary
-    thr = np.median(vals)
-    b_global = (mat >= thr).astype(float)
-    b_global[~mask] = 1.0
+for i in range(1, M):
+    row = mat[i]
+    row = np.where(np.isnan(row), np.nanmean(row), row)
 
-    plt.figure(figsize=(7,4))
-    plt.imshow(b_global, cmap="gray", aspect="auto", interpolation="nearest")
-    plt.title(f"{col} – binary global")
-    plt.tight_layout()
+    best_shift = 0
+    best_score = -1e9
 
-    # 3) row binary
-    b_row = np.ones_like(mat)
-    for i in range(mat.shape[0]):
-        row = mat[i]
-        m = ~np.isnan(row)
-        if m.sum() == 0:
+    for sh in range(-max_shift, max_shift + 1):
+        if sh < 0:
+            r1 = ref[:sh]
+            r2 = row[-sh:len(r1)-sh]
+        elif sh > 0:
+            r1 = ref[sh:]
+            r2 = row[:len(r1)]
+        else:
+            r1 = ref
+            r2 = row
+
+        L = min(len(r1), len(r2))
+        if L < 60:
             continue
-        rthr = np.median(row[m])
-        b_row[i, m] = (row[m] >= rthr).astype(float)
-    b_row[~mask] = 1.0
 
-    plt.figure(figsize=(7,4))
-    plt.imshow(b_row, cmap="gray", aspect="auto", interpolation="nearest")
-    plt.title(f"{col} – binary per row (look here)")
-    plt.tight_layout()
+        c = np.corrcoef(r1[:L], r2[:L])[0, 1]
+        if c > best_score:
+            best_score = c
+            best_shift = sh
 
-    # 4) transposed
-    plt.figure(figsize=(5,7))
-    plt.imshow(b_row.T, cmap="gray", aspect="auto", interpolation="nearest")
-    plt.title(f"{col} – binary per row – transposed")
-    plt.tight_layout()
+    # write aligned row: first fill with NaN, then drop the shifted slice
+    newrow = np.full(max_len, np.nan, dtype=float)
+    if best_shift < 0:
+        part = row[-best_shift:]
+        newrow[:len(part)] = part
+    elif best_shift > 0:
+        part = row[:max_len - best_shift]
+        newrow[best_shift:best_shift + len(part)] = part
+    else:
+        newrow[:len(row)] = row
 
+    aligned[i] = newrow
+
+# 5) fill remaining NaNs columnwise
+col_mean = np.nanmean(aligned, axis=0)
+inds = np.where(np.isnan(aligned))
+aligned[inds] = col_mean[inds[1]]
+
+# 6) normalize
+mn, mx = aligned.min(), aligned.max()
+img = (aligned - mn) / (mx - mn + 1e-8)
+
+# 7) pool rows and columns to thicken strokes
+row_pool = 3          # 12 rows -> 4 pooled rows
+col_pool = 3
+
+H, W = img.shape
+H2 = (H // row_pool) * row_pool
+W2 = (W // col_pool) * col_pool
+
+img2 = img[:H2, :W2].reshape(H2 // row_pool, row_pool, W2 // col_pool, col_pool).mean(axis=(1, 3))
+
+# 8) adaptive threshold per column -> binary
+med_per_col = np.median(img2, axis=0, keepdims=True)
+binary = (img2 < med_per_col).astype(float)
+
+plt.figure(figsize=(11, 4))
+plt.imshow(1 - binary, cmap="gray", interpolation="nearest", aspect="auto")
+plt.title("noise_level aligned → pooled → column-thresholded\nread left→right")
+plt.axis("off")
 plt.show()
+
+# quick dump of first pooled row
+bits = "".join("1" if x else "0" for x in binary[0])
+print(bits[:240])
